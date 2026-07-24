@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Царство Капибар — Тронный Зал</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body, html { width: 100%; height: 100%; overflow: hidden; font-family: 'Arial', sans-serif; background-color: #000; }
+    
+    /* Затемнение для перехода */
+    #fade-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: black; opacity: 0; z-index: 9999;
+        pointer-events: none; transition: opacity 1s ease;
+    }
+    #fade-overlay.active { opacity: 1; }
+
+    /* Начальный черный экран с кнопкой */
+    #start-overlay { 
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+        background: #000; z-index: 10000; display: flex; 
+        justify-content: center; align-items: center; transition: opacity 2s ease;
+    }
+
+    #game-container { 
+      position: relative; width: 100vw; height: 100vh; 
+      background: url('throne.jpg') center/cover no-repeat; 
+      transition: background-image 0.5s ease-in-out, filter 0.5s ease;
+      animation: fadeIn 1.2s ease-out forwards;
+    }
+
+    @keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+
+    .shake { animation: shakeAnim 0.3s ease-in-out; }
+    @keyframes shakeAnim { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-15px); } 40%, 80% { transform: translateX(15px); } }
+
+    .disco-mode { animation: discoSmooth 2.5s infinite alternate ease-in-out !important; }
+    @keyframes discoSmooth {
+      0% { filter: hue-rotate(0deg) brightness(1.15) contrast(1.1); }
+      33% { filter: hue-rotate(110deg) brightness(1.2) contrast(1.15); }
+      66% { filter: hue-rotate(220deg) brightness(1.15) contrast(1.1); }
+      100% { filter: hue-rotate(330deg) brightness(1.2) contrast(1.15); }
+    }
+
+    #vignette-glow {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 2;
+      box-shadow: inset 0 0 90px 20px rgba(255, 223, 118, 0.45), inset 0 0 160px 50px rgba(212, 175, 55, 0.25);
+    }
+
+    #capybara { position: absolute; bottom: 0; right: 0; height: 65vh; z-index: 3; pointer-events: none; transition: transform 0.3s; }
+
+    #easter-egg-orb {
+      display: none; position: absolute; top: 10%; right: 10%; z-index: 45;
+      font-size: 2.5rem; cursor: pointer; opacity: 0.85;
+      transition: transform 0.3s, opacity 0.3s;
+      filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.9));
+      user-select: none;
+    }
+    #easter-egg-orb:hover { transform: scale(1.3) rotate(20deg); opacity: 1; }
+
+    .dancing-capybara {
+      position: absolute; height: 30vh; z-index: 40; pointer-events: none;
+      filter: drop-shadow(0 8px 15px rgba(0,0,0,0.6));
+      animation: capyJump 0.45s infinite alternate ease-in-out;
+      transition: left 1.2s ease-in-out, bottom 1.2s ease-in-out;
+    }
+
+    @keyframes capyJump {
+      0% { transform: translateY(0) scale(1, 1) rotate(0deg); }
+      50% { transform: translateY(-90px) scale(0.92, 1.08) rotate(5deg); }
+      100% { transform: translateY(-15px) scale(1.05, 0.95) rotate(-4deg); }
+    }
+
+    #dialogue-container {
+      position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+      width: 90%; max-width: 850px; z-index: 100;
+      background: rgba(247, 231, 166, 0.95);
+      border: 3px solid #8c6721; border-radius: 25px;
+      padding: 25px; text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    #dialogue-text { 
+      font-size: 1.25rem; line-height: 1.5; margin-bottom: 20px; 
+      font-weight: bold; color: #3e2809; min-height: 60px;
+    }
+
+    .buttons-wrapper { display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; }
+
+    .btn {
+      padding: 12px 22px; font-size: 1rem; font-weight: bold; color: #ffffff;
+border: 2px solid #fff; border-radius: 15px; cursor: pointer; background: #8c6721;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: all 0.2s;
+    }
+    .btn:hover { background: #a87d2a; transform: translateY(-2px); }
+    .btn-back { background: #4a3b2c; }
+    .btn-back:hover { background: #634f3b; }
+
+    #minigame-area {
+      display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      z-index: 50; overflow: hidden;
+    }
+    .falling-item { position: absolute; font-size: 3.5rem; user-select: none; cursor: pointer; animation: fallDown linear forwards; }
+    @keyframes fallDown { 0% { top: -80px; } 100% { top: 105vh; } }
+    #score-board {
+      position: absolute; top: 20px; left: 20px; font-size: 1.4rem; color: #fff; font-weight: bold;
+      background: rgba(0,0,0,0.7); padding: 12px 24px; border-radius: 15px; z-index: 60; display: none;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    #treasure-zone { display: none; position: absolute; top: 55%; left: 30%; width: 40%; height: 25%; z-index: 55; }
+    .paper-trash { position: absolute; width: 100px; cursor: pointer; z-index: 56; transition: 0.2s; }
+    #secret-scroll { display: none; position: absolute; width: 100px; cursor: pointer; z-index: 57; }
+    
+    #scroll-overlay { 
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+      background: rgba(0,0,0,0.95); z-index: 200; justify-content: center; align-items: center; flex-direction: column;
+    }
+    #scroll-content { width: 700px; height: auto; pointer-events: none; }
+  </style>
+</head>
+<body>
+
+  <audio id="bg-music" loop><source src="music.mp3" type="audio/mpeg"></audio>
+  <audio id="door-sound"><source src="door.mp3" type="audio/mpeg"></audio>
+
+  <!-- Начальный черный экран -->
+  <div id="start-overlay">
+      <button class="btn" onclick="enterGame()">Войти</button>
+  </div>
+
+  <div id="game-container">
+    <div id="vignette-glow"></div>
+    <div id="score-board">Счёт: <span id="score">0</span>/15</div>
+
+    <div id="easter-egg-orb" title="Тайный кристал дискотеки..." onclick="toggleDiscoMode()">🔮</div>
+    <div id="disco-capybaras-container"></div>
+    
+    <div id="treasure-zone"></div>
+
+    <img id="capybara" src="capybara.png" alt="Капибара">
+
+    <div id="dialogue-container">
+      <div id="dialogue-text"></div>
+      <div class="buttons-wrapper" id="menu-buttons">
+        <button class="btn" onclick="chooseOption('throne')">👑 Взойти на трон</button>
+        <button class="btn" onclick="chooseOption('game')">🍉 Пойти в пиршественную залу</button>
+        <button class="btn" onclick="chooseOption('gifts')">🎁 Зайти в сокровищницу</button>
+      </div>
+      <div class="buttons-wrapper" id="throne-buttons" style="display: none;"><button class="btn btn-back" onclick="resetToMainMenu()">◀ Назад к выбору</button></div>
+      <div class="buttons-wrapper" id="gifts-buttons" style="display: none;"><button class="btn" onclick="chooseOption('throne')">👑 Направиться к трону</button><button class="btn btn-back" onclick="resetToMainMenu()">◀ Назад к выбору</button></div>
+      <div class="buttons-wrapper" id="game-buttons" style="display: none;"><button class="btn btn-back" onclick="resetToMainMenu()">◀ Покинуть банкет</button></div>
+      <div class="buttons-wrapper" id="game-end-buttons" style="display: none;"><button class="btn" onclick="chooseOption('throne')">👑 Взойти на трон</button><button class="btn btn-back" onclick="resetToMainMenu()">◀ Назад к выбору</button></div>
+    </div>
+  </div>
+
+  <div id="minigame-area"></div>
+  <div id="scroll-overlay" onclick="closeScroll()">
+    <img id="scroll-content" src="list_text.png" alt="Старинный лист">
+  </div>
+  <div id="fade-overlay"></div>
+
+  <script>
+    const music = document.getElementById('bg-music');
+const doorSound = document.getElementById('door-sound');
+    const gameContainer = document.getElementById('game-container');
+    const dialogueText = document.getElementById('dialogue-text');
+    const capybaraImg = document.getElementById('capybara');
+    const minigameArea = document.getElementById('minigame-area');
+    const scoreBoard = document.getElementById('score-board');
+    const scoreSpan = document.getElementById('score');
+    const easterEggOrb = document.getElementById('easter-egg-orb');
+    const discoContainer = document.getElementById('disco-capybaras-container');
+    const treasureZone = document.getElementById('treasure-zone');
+    const scrollOverlay = document.getElementById('scroll-overlay');
+
+    // Функция входа
+    function enterGame() {
+        music.play();
+        const overlay = document.getElementById('start-overlay');
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.style.display = 'none', 2000);
+        resetToMainMenu();
+    }
+
+    let papersCleared = 0;
+    const capyImages = ['фото1.png', 'фото2.png', 'фото3.png', 'фото4.png', 'фото5.png', 'фото6.png', 'фото7.png', 'фото8.png', 'фото9.png', 'фото10.png'];
+    let score = 0, isGameRunning = false, isDiscoActive = false, spawnInterval, discoMoveInterval, typeTimeout;
+
+    function showButtonGroup(activeId) {
+      const groups = ['menu-buttons', 'throne-buttons', 'gifts-buttons', 'game-buttons', 'game-end-buttons'];
+      groups.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = (id === activeId) ? 'flex' : 'none';
+      });
+    }
+
+    function typeWriter(text, speed, callback) {
+      clearTimeout(typeTimeout);
+      dialogueText.innerHTML = "";
+      let i = 0;
+      function typing() {
+        if (i < text.length) {
+          dialogueText.innerHTML += text.charAt(i);
+          i++;
+          typeTimeout = setTimeout(typing, speed);
+        } else if (callback) { callback(); }
+      }
+      typing();
+    }
+
+    function resetToMainMenu() {
+      stopMinigame(); stopDiscoMode();
+      treasureZone.style.display = 'none';
+      treasureZone.innerHTML = '';
+      easterEggOrb.style.display = 'none';
+      capybaraImg.style.transform = 'scale(1)';
+      gameContainer.style.backgroundImage = "url('throne.jpg')";
+      showButtonGroup('menu-buttons');
+      typeWriter("Ваше Величество, замковый комплекс в вашем распоряжении. Куда изволите отправиться?", 25);
+    }
+
+    function chooseOption(option) {
+      stopMinigame(); stopDiscoMode();
+      treasureZone.style.display = 'none';
+      if (option === 'throne') {
+        // Плавное выключение музыки
+        doorSound.play();
+        document.getElementById('fade-overlay').classList.add('active');
+        let fade = setInterval(() => {
+            if (music.volume > 0.1) music.volume -= 0.1;
+            else { clearInterval(fade); music.pause(); }
+        }, 200);
+        
+        setTimeout(() => { window.location.href = 'throne_final.html'; }, 2000);
+      } 
+      else if (option === 'gifts') {
+        easterEggOrb.style.display = 'none';
+        gameContainer.style.backgroundImage = "url('treasure.jpg')";
+        capybaraImg.style.transform = "scale(1)";
+        showButtonGroup('gifts-buttons');
+        typeWriter("В сокровищнице среди сундуков лежит свиток. Очисти его от хлама!", 25);
+        startTreasury();
+      } 
+      else if (option === 'game') {
+        easterEggOrb.style.display = 'block';
+        gameContainer.style.backgroundImage = "url('banquet.jpg')";
+        capybaraImg.style.transform = "scale(1)";
+        startMinigame();
+      }
+    }
+
+    function startMinigame() {
+      isGameRunning = true; score = 0; scoreSpan.textContent = score;
+      scoreBoard.style.display = 'block'; minigameArea.style.display = 'block'; minigameArea.innerHTML = '';
+      showButtonGroup('game-buttons');
+      typeWriter("Лови еду для Капибары! 🍉=+1, 🍊=+3. Остерегайся острого перца 🌶️ (-2)!", 25);
+      spawnInterval = setInterval(spawnFruit, 600);
+    }
+function stopMinigame() {
+      isGameRunning = false; clearInterval(spawnInterval);
+      minigameArea.style.display = 'none'; scoreBoard.style.display = 'none'; minigameArea.innerHTML = '';
+    }
+
+    function spawnFruit() {
+      if (!isGameRunning) return;
+      const fruit = document.createElement('div');
+      fruit.className = 'falling-item';
+      const rand = Math.random(); let type = 'watermelon';
+      if (rand < 0.6) { fruit.textContent = '🍉'; type = 'watermelon'; } 
+      else if (rand < 0.85) { fruit.textContent = '🍊'; type = 'orange'; } 
+      else { fruit.textContent = '🌶️'; type = 'pepper'; }
+      const x = Math.random() * (window.innerWidth - 100);
+      fruit.style.left = Math.max(20, x) + 'px';
+      fruit.style.animationDuration = (2 + Math.random() * 2) + 's';
+      fruit.onclick = (e) => {
+        e.stopPropagation(); if (!isGameRunning) return;
+        if (type === 'watermelon') score += 1; else if (type === 'orange') score += 3;
+        else { score = Math.max(0, score - 2); gameContainer.classList.add('shake'); setTimeout(() => gameContainer.classList.remove('shake'), 300); }
+        scoreSpan.textContent = score; fruit.remove(); if (score >= 15) endMinigame();
+      };
+      fruit.addEventListener('animationend', () => fruit.remove());
+      minigameArea.appendChild(fruit);
+    }
+
+    function endMinigame() {
+      stopMinigame(); showButtonGroup('game-end-buttons');
+      typeWriter("Роскошный банкет! Капибара погрузилась в полный чилл!", 25);
+    }
+
+    function startTreasury() {
+      treasureZone.style.display = 'block'; treasureZone.innerHTML = ''; papersCleared = 0;
+      const zoneW = treasureZone.clientWidth, zoneH = treasureZone.clientHeight;
+      for(let i=0; i<10; i++) {
+        let p = document.createElement('img'); p.src = 'paper_trash.png'; p.className = 'paper-trash';
+        p.style.left = (Math.random() * (zoneW - 100)) + 'px'; p.style.top = (Math.random() * (zoneH - 100)) + 'px';
+        p.onclick = () => { p.remove(); papersCleared++; if(papersCleared === 10) document.getElementById('secret-scroll').style.display = 'block'; };
+        treasureZone.appendChild(p);
+      }
+      let s = document.createElement('img'); s.src = 'scroll.png'; s.id = 'secret-scroll';
+      s.style.left = (zoneW/2 - 50) + 'px'; s.style.top = (zoneH/2 - 50) + 'px';
+      s.onclick = () => { scrollOverlay.style.display = 'flex'; };
+      treasureZone.appendChild(s);
+    }
+
+    function closeScroll() { scrollOverlay.style.display = 'none'; }
+    function toggleDiscoMode() { if (isDiscoActive) { stopDiscoMode(); typeWriter("Дискотеку завершил.", 25); } else { startDiscoMode(); } }
+
+    function startDiscoMode() {
+      isDiscoActive = true; gameContainer.classList.add('disco-mode'); capybaraImg.style.transform = "scale(1.15) rotate(-3deg)";
+      discoContainer.innerHTML = '';
+      for (let i = 0; i < 10; i++) {
+        const capy = document.createElement('img'); capy.src = capyImages[i]; capy.onerror = function() { this.src = 'capybara.png'; };
+        capy.className = 'dancing-capybara'; capy.style.left = (Math.random() * 75) + 'vw'; capy.style.bottom = (22 + Math.random() * 18) + 'vh';
+        capy.style.animationDuration = (0.35 + Math.random() * 0.25) + 's'; discoContainer.appendChild(capy);
+      }
+      discoMoveInterval = setInterval(() => {
+        document.querySelectorAll('.dancing-capybara').forEach(capy => {
+          capy.style.left = (Math.random() * 75) + 'vw'; capy.style.bottom = (22 + Math.random() * 18) + 'vh';
+        });
+      }, 1200);
+      typeWriter("Врубился диско режим! Капибары скачут!", 25);
+    }
+
+    function stopDiscoMode() {
+      isDiscoActive = false; gameContainer.classList.remove('disco-mode'); capybaraImg.style.transform = "scale(1)";
+      clearInterval(discoMoveInterval); discoContainer.innerHTML = '';
+    }
+  </script>
+</body>
+</html>

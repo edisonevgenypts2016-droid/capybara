@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Царство Капибар</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body, html { width: 100%; height: 100%; overflow: hidden; font-family: 'Arial', sans-serif; background-color: #000; }
+    
+    #start-overlay { 
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+        background: #000; z-index: 10000; display: flex; 
+        justify-content: center; align-items: center; transition: opacity 2s ease;
+    }
+
+    #game-container { position: relative; width: 100vw; height: 100vh; background: url('doors.jpg') center/cover no-repeat; transition: background 1s ease; }
+    #vignette-glow { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; box-shadow: inset 0 0 90px 20px rgba(255, 223, 118, 0.45), inset 0 0 160px 50px rgba(212, 175, 55, 0.25); }
+    #capybara { position: absolute; bottom: 0; right: 0; height: 65vh; z-index: 3; pointer-events: none; }
+
+    #dialogue-container { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 850px; height: 250px; z-index: 10; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 30px; }
+    .dialogue-bg { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #f7e7a6; filter: blur(35px); border-radius: 40px; opacity: 0.95; z-index: -1; }
+    .dialogue-content { position: relative; z-index: 2; width: 100%; text-align: center; }
+    #dialogue-text { font-size: 1.4rem; line-height: 1.5; margin-bottom: 30px; font-weight: bold; color: #3e2809; text-shadow: 0 0 4px rgba(255, 255, 255, 0.6); height: 80px; }
+
+    .buttons-wrapper { display: flex; gap: 30px; justify-content: center; align-items: center; height: 50px; }
+    .btn { padding: 12px 35px; font-size: 1.15rem; font-weight: bold; color: #fff; border: none; border-radius: 20px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.25); transition: background 0.2s; }
+    #btn-yes { background: #8c6721; }
+    #btn-yes:hover { background: #a87d2a; }
+
+    #no-anchor { width: 110px; height: 46px; }
+    #btn-no { position: fixed; background: #665c49; z-index: 9999; transition: left 0.3s ease-out, top 0.3s ease-out; }
+    #fade-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; opacity: 0; pointer-events: none; transition: opacity 2s ease; z-index: 10000; }
+    #fade-overlay.active { opacity: 1; pointer-events: all; }
+  </style>
+</head>
+<body>
+
+  <audio id="bg-music" loop><source src="music.mp3" type="audio/mpeg"></audio>
+  <audio id="door-sound"><source src="door.mp3" type="audio/mpeg"></audio>
+
+  <div id="start-overlay">
+      <button class="btn" id="btn-yes" onclick="enterGame()">Войти</button>
+  </div>
+
+  <div id="game-container">
+    <div id="vignette-glow"></div>
+    <img id="capybara" src="capybara.png" alt="Капибара">
+    <div id="dialogue-container">
+      <div class="dialogue-bg"></div>
+      <div class="dialogue-content">
+        <div id="dialogue-text"></div>
+        <div class="buttons-wrapper">
+          <button class="btn" id="btn-yes" onclick="answerYes()">Да</button>
+          <div id="no-anchor"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="fade-overlay"></div>
+  <button class="btn" id="btn-no">Нет</button>
+
+  <script>
+    const music = document.getElementById('bg-music');
+    const doorSound = document.getElementById('door-sound');
+    const btnNo = document.getElementById('btn-no');
+    const noAnchor = document.getElementById('no-anchor');
+    const dialogueText = document.getElementById('dialogue-text');
+    const capybaraImg = document.getElementById('capybara');
+    const fadeOverlay = document.getElementById('fade-overlay');
+    let noClickCount = 0;
+function enterGame() {
+        music.play();
+        document.getElementById('start-overlay').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('start-overlay').style.display = 'none';
+            typeWriter("Ваше Капибарство! Желаете начать прием поздравлений и взойти на трон?", dialogueText, 40);
+        }, 2000);
+    }
+
+    function typeWriter(text, element, speed, callback) {
+      element.innerHTML = "";
+      let i = 0;
+      function typing() {
+        if (i < text.length) { element.innerHTML += text.charAt(i); i++; setTimeout(typing, speed); } 
+        else if (callback) callback();
+      }
+      typing();
+    }
+
+    function moveNoButton() {
+      const rect = btnNo.getBoundingClientRect();
+      const newX = Math.max(50, Math.min(rect.left + (Math.random()-0.5)*200, window.innerWidth - 150));
+      const newY = Math.max(50, Math.min(rect.top + (Math.random()-0.5)*160, window.innerHeight - 100));
+      btnNo.style.left = newX + 'px'; btnNo.style.top = newY + 'px';
+    }
+
+    btnNo.onmouseover = moveNoButton;
+    btnNo.onclick = (e) => {
+      e.stopPropagation();
+      if (++noClickCount >= 3) {
+        btnNo.style.display = 'none';
+        typeWriter("Ваше величество, нельзя уйти с того, что ещё не началось!", dialogueText, 30);
+        capybaraImg.src = "capybara2.png";
+      } else moveNoButton();
+    };
+
+    function answerYes() {
+      typeWriter("Прекрасный выбор! Сейчас начнется самое интересное...", dialogueText, 40, () => {
+        fadeOverlay.classList.add('active');
+        doorSound.play();
+        let fade = setInterval(() => {
+            if (music.volume > 0.1) music.volume -= 0.1;
+            else { clearInterval(fade); music.pause(); }
+        }, 200);
+        setTimeout(() => window.location.href = "throne.html", 2000);
+      });
+    }
+
+    window.onload = () => {
+      const rect = noAnchor.getBoundingClientRect();
+      btnNo.style.left = rect.left + 'px'; btnNo.style.top = rect.top + 'px';
+    };
+  </script>
+</body>
+</html>
